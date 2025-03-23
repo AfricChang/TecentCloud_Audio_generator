@@ -74,7 +74,7 @@ python audio_generator.py -f <文本文件路径> [-o <输出文件路径>] [-v 
 
 - `-f, --file`: **必需参数**，指定要转换为语音的文本文件路径
 - `-o, --output`: 可选参数，指定输出文件的完整路径和格式（通过文件后缀决定格式，如：output.mp3）。如果不指定，将在输入文件的同一目录下生成同名但后缀为.wav的音频文件
-- `-v, --voice`: 可选参数，指定腾讯云的音色ID，默认为101011，音色ID和对应的角色可查看config/tencent_cloud_voice_type.csv,也可在线试听https://console.cloud.tencent.com/tts/complexaudio
+- `-v, --voice`: 可选参数，指定腾讯云的音色ID，默认为101011，音色ID和对应的角色可查看config/tencent_cloud_voice_type.csv,也可以[在线试听](https://console.cloud.tencent.com/tts/complexaudio)
 
 ### 支持的输出格式
 
