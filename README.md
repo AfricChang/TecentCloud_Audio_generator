@@ -26,7 +26,7 @@
     1. 登录腾讯云控制台
     2. 在搜索栏中搜索"语音合成"或直接访问 [语音合成控制台](https://console.cloud.tencent.com/tts)
     3. 按照提示开通服务（新用户通常有免费额度）
-    4. 当然，其实你可以直接在线合成，还可以听听不同音色的差别(https://console.cloud.tencent.com/tts/complexaudio),这个项目只是众多流程的一个小步骤所以我用脚本合成比较方便。
+    4. 当然，其实你可以直接在线合成，还可以听听不同音色的差别:[在线合成](https://console.cloud.tencent.com/tts/complexaudio).这个项目只是众多流程的一个小步骤所以我用脚本合成比较方便。
   
   - **获取访问凭证（SecretId 和 SecretKey）**：
     1. 访问 [API密钥管理](https://console.cloud.tencent.com/cam/capi)
