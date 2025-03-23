@@ -3,6 +3,11 @@ __pycache__/
 *.py[cod]
 *$py.class
 
+#secret_key
+config/tencent_cloud_secret_key.csv
+#ffmpeg
+softwares/ffmpeg
+
 # C extensions
 *.so
 
