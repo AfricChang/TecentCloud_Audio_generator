@@ -6,6 +6,7 @@ from tencentcloud.tts.v20190823 import tts_client, models
 import base64
 import json
 import os
+import sys  # 添加sys模块导入
 import re
 import argparse
 from datetime import datetime
@@ -16,10 +17,22 @@ import pathlib
 
 # 设置基础目录（项目根目录）
 base_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "./"))
-
 # FFmpeg路径
-ffmpeg_path = os.path.abspath(os.path.join(base_dir, "Softwares", "ffmpeg", "bin", "ffmpeg.exe"))
+# 修改base_dir的获取方式
+base_dir = os.path.abspath(os.path.dirname(sys.executable)) if getattr(sys, 'frozen', False) else os.path.abspath(os.path.dirname(__file__))
 
+# 修改ffmpeg路径获取函数
+def get_ffmpeg_path():
+    """动态获取ffmpeg路径（适配打包环境）"""
+    if getattr(sys, 'frozen', False):
+        # 打包后路径
+        return os.path.join(base_dir, 'softwares', 'ffmpeg', 'ffmpeg.exe')
+    else:
+        # 开发环境路径
+        return os.path.abspath(os.path.join(base_dir, "Softwares", "ffmpeg", "ffmpeg.exe"))
+
+# 替换原有的ffmpeg_path定义
+ffmpeg_path = get_ffmpeg_path()
 def load_credentials_from_csv(csv_path):
     """从CSV文件中加载腾讯云凭证"""
     try:
@@ -73,7 +86,12 @@ def process_text_by_lines(text):
 def get_voice_name(voice_id):
     """根据音色ID获取音色名称"""
     voice_id_str = str(voice_id)
-    csv_path = os.path.join('Config', 'tencent_cloud_voice_type.csv')
+    
+    # 修改CSV路径获取方式
+    if getattr(sys, 'frozen', False):
+        csv_path = os.path.join(base_dir, 'config', 'tencent_cloud_voice_type.csv')
+    else:
+        csv_path = os.path.join('Config', 'tencent_cloud_voice_type.csv')
     
     # 如果音色文件不存在，直接返回ID作为前缀
     if not os.path.exists(csv_path):
@@ -102,9 +120,19 @@ def text_to_speech(text, output_file="output.wav", voice_type=101011, speed=0, v
     temp_files = []
     concat_list_path = None
     
+    # 添加路径验证
+    if not os.path.exists(ffmpeg_path):
+        print(f"致命错误：ffmpeg路径不存在 {ffmpeg_path}")
+        return False
+        
     try:
         # 从CSV文件加载凭证
-        csv_path = os.path.join('Config', 'tencent_cloud_secret_key.csv')
+        # 修改CSV路径获取方式
+        if getattr(sys, 'frozen', False):
+            csv_path = os.path.join(base_dir, 'config', 'tencent_cloud_secret_key.csv')
+        else:
+            csv_path = os.path.join('Config', 'tencent_cloud_secret_key.csv')
+            
         secret_id, secret_key = load_credentials_from_csv(csv_path)
         
         if not secret_id or not secret_key:
@@ -199,7 +227,9 @@ def text_to_speech(text, output_file="output.wav", voice_type=101011, speed=0, v
             cmd.append(output_file)
             
             try:
-                subprocess.run(cmd, check=True, capture_output=True)
+                # 添加creationflags参数隐藏控制台窗口（仅Windows系统）
+                creation_flags = 0x08000000 if sys.platform == "win32" else 0  # CREATE_NO_WINDOW标志
+                subprocess.run(cmd, check=True, capture_output=True, creationflags=creation_flags)
                 print(f"所有片段已合并，最终文件保存为 {output_file}")
                 return True
             except subprocess.CalledProcessError as e:

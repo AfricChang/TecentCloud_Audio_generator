@@ -17,6 +17,54 @@ from qfluentwidgets import (PushButton, TabBar, SearchLineEdit, Slider,
                            FluentIcon, ComboBox)
 import sip
 
+# 资源路径处理
+def get_resource_path(relative_path):
+    """
+    获取资源绝对路径，兼容开发环境和PyInstaller打包后的环境
+    """
+    
+    if hasattr(sys, '_MEIPASS'):
+        # PyInstaller打包后的临时目录
+        base_path = sys._MEIPASS
+    else:
+        # 开发环境下的当前目录
+        base_path = os.path.abspath(os.path.dirname(__file__))
+    
+    full_path = os.path.join(base_path, relative_path)
+    
+    # 检查文件是否存在并记录
+    exists = os.path.exists(full_path)
+    
+    # 如果文件不存在，尝试在可执行文件目录查找
+    if not exists and hasattr(sys, '_MEIPASS'):
+        # 获取可执行文件所在目录
+        exe_dir = os.path.dirname(sys.executable)
+        alternative_path = os.path.join(exe_dir, relative_path)
+        alt_exists = os.path.exists(alternative_path)
+        
+        if alt_exists:
+            return alternative_path
+    
+    return full_path
+
+# 异常处理钩子，用于记录崩溃信息
+def excepthook(exc_type, exc_value, exc_traceback):
+    """处理未捕获的异常并写入日志文件"""
+    error_msg = ''.join(traceback.format_exception(exc_type, exc_value, exc_traceback))
+    
+    # 在用户桌面创建日志文件
+    desktop = os.path.join(os.path.expanduser('~'), 'Desktop')
+    log_file = os.path.join(desktop, 'tts_error_log.txt')
+    
+    with open(log_file, 'w', encoding='utf-8') as f:
+        f.write(error_msg)
+    
+    print(f"错误信息已保存到: {log_file}")
+
+# 设置全局异常处理
+import traceback
+sys.excepthook = excepthook
+
 # 导入audio_generator模块
 import audio_generator
 
@@ -57,14 +105,11 @@ class VoiceCard(CardWidget):
         # 头像
         self.avatar_label = QLabel()
         
-        # 获取当前项目根目录
-        current_dir = os.path.dirname(os.path.abspath(__file__))
-        
         # 根据性别选择头像
         if voice_info.is_female:
-            avatar_path = os.path.join(current_dir, "Resources", "icon-women.svg")
+            avatar_path = get_resource_path(os.path.join("Resources", "icon-women.svg"))
         else:
-            avatar_path = os.path.join(current_dir, "Resources", "icon-man.svg")
+            avatar_path = get_resource_path(os.path.join("Resources", "icon-man.svg"))
             
         if os.path.exists(avatar_path):
             # 加载SVG文件
@@ -90,8 +135,8 @@ class VoiceCard(CardWidget):
         self.play_button = ToolButton(self.avatar_container)
         
         # 保存播放和暂停图标路径
-        self.play_icon_path = os.path.join(current_dir, "Resources", "image_icon_listen_play.svg")
-        self.pause_icon_path = os.path.join(current_dir, "Resources", "image_icon_listen_pause.svg")
+        self.play_icon_path = get_resource_path(os.path.join("Resources", "image_icon_listen_play.svg"))
+        self.pause_icon_path = get_resource_path(os.path.join("Resources", "image_icon_listen_pause.svg"))
         
         # 设置初始图标为播放
         self.update_play_button_icon()
@@ -316,7 +361,17 @@ class TTSApp(QWidget):
     def load_voice_types(self):
         """从CSV文件加载音色类型"""
         try:
-            with open('config/tencent_cloud_voice_type.csv', 'r', encoding='utf-8') as f:
+            # 使用get_resource_path获取CSV文件的路径
+            csv_path = get_resource_path('config/tencent_cloud_voice_type.csv')
+            
+            # 默认初始化all_types为空列表，确保即使文件加载失败也有一个有效的属性
+            self.all_types = []
+            
+            # 打印路径信息以便调试
+            print(f"尝试加载音色文件: {csv_path}")
+            print(f"此路径是否存在: {os.path.exists(csv_path)}")
+            
+            with open(csv_path, 'r', encoding='utf-8') as f:
                 reader = csv.reader(f)
                 next(reader)  # 跳过标题行
                 
@@ -356,19 +411,41 @@ class TTSApp(QWidget):
                 self.all_scenes = sorted(list(scenes_set))
                 self.all_types = sorted(list(types_set))
                         
-            print(f"已加载 {len(self.voice_list)} 种音色，{len(self.all_scenes)} 种场景")
+            print(f"已加载 {len(self.voice_list)} 种音色，{len(self.all_scenes)} 种场景，{len(self.all_types)} 种类型")
             
         except Exception as e:
-            print(f"加载音色文件失败: {e}")
-            
+            error_msg = f"加载音色文件失败: {e}"
+            print(error_msg)
+            # 确保基本属性被初始化，即使在文件加载失败时
+            if not hasattr(self, 'voice_list') or self.voice_list is None:
+                self.voice_list = []
+            if not hasattr(self, 'all_scenes') or self.all_scenes is None:
+                self.all_scenes = []
+            if not hasattr(self, 'all_types') or self.all_types is None:
+                self.all_types = []
+                
+            # 如果打包后，将日志写入桌面
+            if hasattr(sys, '_MEIPASS'):
+                desktop = os.path.join(os.path.expanduser('~'), 'Desktop')
+                log_file = os.path.join(desktop, 'tts_error_log.txt')
+                with open(log_file, 'w', encoding='utf-8') as f:
+                    f.write(f"{error_msg}\n")
+                    f.write(f"尝试加载的文件路径: {csv_path}\n")
+                    if 'csv_path' in locals():
+                        f.write(f"此路径是否存在: {os.path.exists(csv_path)}\n")
+                    f.write(f"PyInstaller临时目录: {getattr(sys, '_MEIPASS', '未打包')}\n")
+                    f.write(f"当前工作目录: {os.getcwd()}\n")
+                    f.write(f"程序所在目录: {os.path.dirname(os.path.abspath(__file__))}\n")
+    
     def find_audio_sample(self, voice_id):
         """查找音色对应的示例音频"""
         voice_id_str = str(voice_id)
-        current_dir = os.path.dirname(os.path.abspath(__file__))
+        
+        # 使用get_resource_path获取音频目录
         audio_dirs = [
-            os.path.join(current_dir, "AudioResources", "标准音色"),
-            os.path.join(current_dir, "AudioResources", "大模型音色"),
-            os.path.join(current_dir, "AudioResources", "精品音色")
+            get_resource_path(os.path.join("AudioResources", "标准音色")),
+            get_resource_path(os.path.join("AudioResources", "大模型音色")),
+            get_resource_path(os.path.join("AudioResources", "精品音色"))
         ]
         
         for dir_path in audio_dirs:
@@ -865,12 +942,28 @@ class TTSApp(QWidget):
             parent=self
         )
         
-        # 创建Audios目录（如果不存在）
-        current_dir = os.path.dirname(os.path.abspath(__file__))
-        audio_dir = os.path.join(current_dir, "Audios")
-        if not os.path.exists(audio_dir):
-            os.makedirs(audio_dir)
+        # 获取应用程序所在目录
+        if hasattr(sys, '_MEIPASS'):
+            # PyInstaller打包后，使用可执行文件所在目录
+            app_dir = os.path.dirname(sys.executable)
+        else:
+            # 开发环境，使用当前脚本所在目录
+            app_dir = os.path.dirname(os.path.abspath(__file__))
         
+        # 创建Audios目录（如果不存在）
+        audio_dir = os.path.join(app_dir, "Audios")
+        if not os.path.exists(audio_dir):
+            try:
+                os.makedirs(audio_dir)
+                self.log(f"创建音频目录: {audio_dir}")
+            except Exception as e:
+                self.log(f"创建音频目录失败: {str(e)}")
+                # 尝试在用户目录创建
+                audio_dir = os.path.join(os.path.expanduser("~"), "Audios")
+                if not os.path.exists(audio_dir):
+                    os.makedirs(audio_dir)
+                self.log(f"使用备用音频目录: {audio_dir}")
+                
         # 创建带时间戳的文件名
         timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
         voice_name = self.selected_voice.voice_info.name
@@ -1070,8 +1163,15 @@ class TTSApp(QWidget):
     def open_audio_folder(self):
         """打开音频保存文件夹"""
         try:
-            current_dir = os.path.dirname(os.path.abspath(__file__))
-            audio_dir = os.path.join(current_dir, "Audios")
+            # 获取应用程序所在目录
+            if hasattr(sys, '_MEIPASS'):
+                # PyInstaller打包后，使用可执行文件所在目录
+                app_dir = os.path.dirname(sys.executable)
+            else:
+                # 开发环境，使用当前脚本所在目录
+                app_dir = os.path.dirname(os.path.abspath(__file__))
+            
+            audio_dir = os.path.join(app_dir, "Audios")
             
             # 确保目录存在
             if not os.path.exists(audio_dir):
@@ -1097,6 +1197,8 @@ class TTSApp(QWidget):
 
 # 启动应用
 if __name__ == '__main__':
+    
+    # 创建应用实例
     app = QApplication(sys.argv)
     ex = TTSApp()
     ex.show()
