@@ -311,9 +311,9 @@ class TTSApp(QWidget):
         voice_id_str = str(voice_id)
         current_dir = os.path.dirname(os.path.abspath(__file__))
         audio_dirs = [
-            os.path.join(current_dir, "AudioResources", "samples_8k"),
-            os.path.join(current_dir, "AudioResources", "samples_16k"),
-            os.path.join(current_dir, "AudioResources", "samples_24k")
+            os.path.join(current_dir, "AudioResources", "标准音色"),
+            os.path.join(current_dir, "AudioResources", "大模型音色"),
+            os.path.join(current_dir, "AudioResources", "精品音色")
         ]
         
         for dir_path in audio_dirs:
