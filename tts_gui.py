@@ -8,9 +8,10 @@ from PyQt5.QtWidgets import (QApplication, QWidget, QVBoxLayout, QHBoxLayout,
                             QLabel, QLineEdit, QTextEdit, QScrollArea, QGridLayout,
                             QTabWidget, QFrame, QStackedWidget, QComboBox, QPlainTextEdit,
                             QFileDialog)
-from PyQt5.QtCore import Qt, QSize, QThread, pyqtSignal, QEvent
+from PyQt5.QtCore import Qt, QSize, QThread, pyqtSignal, QEvent, QUrl
 from PyQt5.QtGui import QPixmap, QIcon, QPainter, QTextCursor, QCursor
 from PyQt5.QtSvg import QSvgRenderer
+from PyQt5.QtMultimedia import QMediaPlayer, QMediaContent
 from qfluentwidgets import (PushButton, TabBar, SearchLineEdit, Slider, 
                            ToggleButton, CardWidget, ToolButton, InfoBar,
                            FluentIcon, ComboBox)
@@ -32,12 +33,13 @@ class VoiceInfo:
         self.gender = "女声" if ("女声" in scene or not ("男声" in scene)) else "男声"
         self.is_female = self.gender == "女声"
 
-# 修改VoiceCard类以支持悬停播放功能
+# 修改VoiceCard类，支持暂停功能和显示不同图标
 class VoiceCard(CardWidget):
     def __init__(self, voice_info, parent=None):
         super().__init__(parent)
         self.voice_info = voice_info
         self.setFixedSize(180, 80)
+        self.is_playing = False  # 添加播放状态跟踪
         
         # 设置鼠标跟踪，以便接收鼠标悬停事件
         self.setMouseTracking(True)
@@ -85,21 +87,13 @@ class VoiceCard(CardWidget):
         
         # 创建播放按钮（初始隐藏）
         self.play_button = ToolButton(self.avatar_container)
-        play_icon_path = os.path.join(current_dir, "Resources", "image_icon_listen_play.svg")
         
-        if os.path.exists(play_icon_path):
-            # 加载播放图标
-            play_renderer = QSvgRenderer(play_icon_path)
-            play_pixmap = QPixmap(30, 30)
-            play_pixmap.fill(Qt.transparent)
-            play_painter = QPainter(play_pixmap)
-            play_renderer.render(play_painter)
-            play_painter.end()
-            
-            self.play_button.setIcon(QIcon(play_pixmap))
-        else:
-            # 如果找不到SVG，使用内置图标
-            self.play_button.setIcon(FluentIcon.PLAY)
+        # 保存播放和暂停图标路径
+        self.play_icon_path = os.path.join(current_dir, "Resources", "image_icon_listen_play.svg")
+        self.pause_icon_path = os.path.join(current_dir, "Resources", "image_icon_listen_pause.svg")
+        
+        # 设置初始图标为播放
+        self.update_play_button_icon()
         
         self.play_button.setFixedSize(30, 30)
         self.play_button.setStyleSheet("background-color: rgba(0, 0, 0, 0.5); border-radius: 15px;")
@@ -130,6 +124,35 @@ class VoiceCard(CardWidget):
             self.hot_button.setStyleSheet("background-color: orange; color: white; border-radius: 5px;")
             self.layout.addWidget(self.hot_button, 0, Qt.AlignTop | Qt.AlignRight)
     
+    def update_play_button_icon(self):
+        """根据播放状态更新按钮图标"""
+        if self.is_playing:
+            # 正在播放，显示暂停图标
+            if os.path.exists(self.pause_icon_path):
+                pause_renderer = QSvgRenderer(self.pause_icon_path)
+                pause_pixmap = QPixmap(30, 30)
+                pause_pixmap.fill(Qt.transparent)
+                pause_painter = QPainter(pause_pixmap)
+                pause_renderer.render(pause_painter)
+                pause_painter.end()
+                self.play_button.setIcon(QIcon(pause_pixmap))
+            else:
+                # 如果找不到SVG，使用内置图标
+                self.play_button.setIcon(FluentIcon.PAUSE)
+        else:
+            # 未播放，显示播放图标
+            if os.path.exists(self.play_icon_path):
+                play_renderer = QSvgRenderer(self.play_icon_path)
+                play_pixmap = QPixmap(30, 30)
+                play_pixmap.fill(Qt.transparent)
+                play_painter = QPainter(play_pixmap)
+                play_renderer.render(play_painter)
+                play_painter.end()
+                self.play_button.setIcon(QIcon(play_pixmap))
+            else:
+                # 如果找不到SVG，使用内置图标
+                self.play_button.setIcon(FluentIcon.PLAY)
+    
     def enterEvent(self, event):
         """鼠标进入事件"""
         self.play_button.show()
@@ -140,28 +163,42 @@ class VoiceCard(CardWidget):
         self.play_button.hide()
         super().leaveEvent(event)
     
+    def set_playing_state(self, is_playing):
+        """设置播放状态"""
+        self.is_playing = is_playing
+        self.update_play_button_icon()
+    
     def play_audio_sample(self):
-        """播放音色示例"""
+        """播放或暂停音色示例"""
         # 通过找到父窗口来调用播放函数
         app = self.window()
-        if app and hasattr(app, 'find_audio_sample') and hasattr(app, 'play_audio_file'):
+        if app and hasattr(app, 'find_audio_sample') and hasattr(app, 'play_sample_audio'):
             voice_id = self.voice_info.voice_id
-            audio_file = app.find_audio_sample(voice_id)
-            if audio_file:
-                app.play_audio_file(audio_file)
+            
+            if self.is_playing:
+                # 如果正在播放，则暂停
+                app.pause_sample_audio(self)
                 # 添加日志
                 if hasattr(app, 'log'):
-                    app.log(f"播放音色 {self.voice_info.name} (ID: {voice_id}) 的示例音频")
+                    app.log(f"暂停音色 {self.voice_info.name} (ID: {voice_id}) 的示例音频")
             else:
-                # 未找到音频文件时通知用户
-                if hasattr(app, 'log'):
-                    app.log(f"未找到音色 {self.voice_info.name} 的示例音频")
-                
-                InfoBar.warning(
-                    title="警告",
-                    content=f"未找到音色 {self.voice_info.name} 的示例音频",
-                    parent=app
-                )
+                # 如果未播放，则播放
+                audio_file = app.find_audio_sample(voice_id)
+                if audio_file:
+                    app.play_sample_audio(self, audio_file)
+                    # 添加日志
+                    if hasattr(app, 'log'):
+                        app.log(f"播放音色 {self.voice_info.name} (ID: {voice_id}) 的示例音频")
+                else:
+                    # 未找到音频文件时通知用户
+                    if hasattr(app, 'log'):
+                        app.log(f"未找到音色 {self.voice_info.name} 的示例音频")
+                    
+                    InfoBar.warning(
+                        title="警告",
+                        content=f"未找到音色 {self.voice_info.name} 的示例音频",
+                        parent=app
+                    )
         
     def mousePressEvent(self, event):
         # 选中效果
@@ -255,6 +292,20 @@ class TTSApp(QWidget):
         self.current_scene = None
         self.current_gender = None
         self.current_type = None
+        
+        # 初始化媒体播放器
+        self.media_player = QMediaPlayer()
+        self.media_player.stateChanged.connect(self.media_state_changed)
+        self.media_player.positionChanged.connect(self.position_changed)
+        self.media_player.durationChanged.connect(self.duration_changed)
+        
+        # 添加专门用于示例音频的播放器
+        self.sample_player = QMediaPlayer()
+        self.sample_player.stateChanged.connect(self.sample_state_changed)
+        
+        # 跟踪当前正在播放示例音频的音色卡片
+        self.current_playing_card = None
+        
         self.load_voice_types()
         self.initUI()
 
@@ -510,6 +561,7 @@ class TTSApp(QWidget):
         # 播放进度条
         self.progress_slider = Slider(Qt.Horizontal)
         self.progress_slider.setEnabled(False)
+        self.progress_slider.sliderMoved.connect(self.set_position)  # 添加滑动控制播放位置的功能
         bottom_controls.addWidget(self.progress_slider)
         
         # 时间显示
@@ -826,6 +878,12 @@ class TTSApp(QWidget):
                 content="语音合成成功！",
                 parent=self
             )
+            
+            # 保存当前合成的音频文件路径，以便播放
+            self.current_audio_file = output_path
+            
+            # 自动播放合成的音频
+            self.play_audio_file(output_path)
         else:
             self.log("语音合成失败。")
             InfoBar.error(
@@ -839,19 +897,25 @@ class TTSApp(QWidget):
         self.text_input.setReadOnly(False)
     
     def play_audio_file(self, file_path):
-        """播放音频文件"""
+        """使用Qt媒体播放器播放合成的音频文件"""
         if not os.path.exists(file_path):
             self.log(f"错误: 音频文件 {file_path} 不存在")
             return False
         
         try:
-            # 使用系统默认播放器播放音频
-            if sys.platform == "win32":
-                os.startfile(file_path)
-            elif sys.platform == "darwin":  # macOS
-                subprocess.call(["open", file_path])
-            else:  # Linux
-                subprocess.call(["xdg-open", file_path])
+            # 保存当前播放的文件
+            self.current_audio_file = file_path
+            
+            # 使用媒体播放器播放
+            media_content = QMediaContent(QUrl.fromLocalFile(file_path))
+            self.media_player.setMedia(media_content)
+            self.media_player.play()
+            
+            # 启用进度条
+            self.progress_slider.setEnabled(True)
+            
+            # 更改播放按钮图标为暂停
+            self.play_button.setIcon(FluentIcon.PAUSE)
             
             self.log(f"正在播放音频: {os.path.basename(file_path)}")
             return True
@@ -859,32 +923,90 @@ class TTSApp(QWidget):
             self.log(f"播放音频失败: {str(e)}")
             return False
     
+    def media_state_changed(self, state):
+        """媒体播放状态改变时的处理"""
+        if state == QMediaPlayer.PlayingState:
+            self.play_button.setIcon(FluentIcon.PAUSE)
+        else:
+            self.play_button.setIcon(FluentIcon.PLAY)
+    
+    def position_changed(self, position):
+        """播放位置改变时更新进度条"""
+        self.progress_slider.setValue(position)
+        
+        # 更新时间显示
+        current_secs = position // 1000
+        total_secs = self.media_player.duration() // 1000
+        self.time_label.setText(f"{current_secs//60:02d}:{current_secs%60:02d} / {total_secs//60:02d}:{total_secs%60:02d}")
+    
+    def duration_changed(self, duration):
+        """媒体时长改变时更新进度条范围"""
+        self.progress_slider.setRange(0, duration)
+    
+    def set_position(self, position):
+        """设置播放位置"""
+        self.media_player.setPosition(position)
+    
     def on_play_audio(self):
-        """播放按钮点击事件"""
-        if hasattr(self, 'selected_voice') and hasattr(self.selected_voice, 'voice_info'):
-            voice_id = self.selected_voice.voice_info.voice_id
-            voice_name = self.selected_voice.voice_info.name
+        """播放按钮点击事件 - 只控制合成音频，不控制示例音频"""
+        # 检查播放器状态
+        if self.media_player.state() == QMediaPlayer.PlayingState:
+            # 如果正在播放，则暂停
+            self.media_player.pause()
+        elif self.media_player.state() == QMediaPlayer.PausedState:
+            # 如果已暂停，则继续播放
+            self.media_player.play()
+        elif hasattr(self, 'current_audio_file') and os.path.exists(self.current_audio_file):
+            # 播放上次合成的文件
+            self.play_audio_file(self.current_audio_file)
+        else:
+            # 没有可播放的合成音频
+            InfoBar.warning(
+                title="提示",
+                content="没有可播放的合成音频，请先合成语音",
+                parent=self
+            )
+            self.log("没有可播放的合成音频")
+    
+    def play_sample_audio(self, voice_card, file_path):
+        """播放示例音频"""
+        if not os.path.exists(file_path):
+            self.log(f"错误: 音频文件 {file_path} 不存在")
+            return False
+        
+        try:
+            # 如果有其他正在播放的示例，先停止它
+            if self.current_playing_card and self.current_playing_card != voice_card:
+                self.current_playing_card.set_playing_state(False)
             
-            self.log(f"查找音色 {voice_name} (ID: {voice_id}) 的示例音频...")
-            audio_file = self.find_audio_sample(voice_id)
+            # 设置新的播放卡片
+            self.current_playing_card = voice_card
+            voice_card.set_playing_state(True)
             
-            if audio_file and os.path.exists(audio_file):
-                # 播放示例音频
-                self.log(f"播放音频文件: {os.path.basename(audio_file)}")
-                self.play_audio_file(audio_file)
-                InfoBar.info(
-                    title="播放音频",
-                    content=f"正在播放音色 {voice_name} 的示例音频",
-                    parent=self
-                )
-                
-            else:
-                self.log(f"未找到音色 {voice_name} 的示例音频")
-                InfoBar.warning(
-                    title="警告",
-                    content=f"未找到音色 {voice_name} 的示例音频",
-                    parent=self
-                )
+            # 播放示例音频
+            self.sample_player.setMedia(QMediaContent(QUrl.fromLocalFile(file_path)))
+            self.sample_player.play()
+            
+            self.log(f"正在播放示例音频: {os.path.basename(file_path)}")
+            return True
+        except Exception as e:
+            self.log(f"播放示例音频失败: {str(e)}")
+            return False
+    
+    def pause_sample_audio(self, voice_card):
+        """暂停示例音频"""
+        if self.current_playing_card == voice_card:
+            self.sample_player.pause()
+            voice_card.set_playing_state(False)
+            return True
+        return False
+    
+    def sample_state_changed(self, state):
+        """示例音频播放状态改变时的处理"""
+        if state == QMediaPlayer.StoppedState and self.current_playing_card:
+            # 播放结束时重置状态
+            self.current_playing_card.set_playing_state(False)
+            self.current_playing_card = None
     
     def filter_voices(self, text):
         """根据搜索框筛选音色"""
