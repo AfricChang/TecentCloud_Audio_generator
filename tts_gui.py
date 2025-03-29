@@ -156,6 +156,9 @@ class VoiceCard(CardWidget):
     def enterEvent(self, event):
         """鼠标进入事件"""
         self.play_button.show()
+        # 如果正在播放，确保显示暂停图标
+        if self.is_playing:
+            self.update_play_button_icon()
         super().enterEvent(event)
     
     def leaveEvent(self, event):
@@ -978,6 +981,7 @@ class TTSApp(QWidget):
             # 如果有其他正在播放的示例，先停止它
             if self.current_playing_card and self.current_playing_card != voice_card:
                 self.current_playing_card.set_playing_state(False)
+                self.sample_player.stop()
             
             # 设置新的播放卡片
             self.current_playing_card = voice_card
