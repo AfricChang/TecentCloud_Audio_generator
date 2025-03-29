@@ -52,7 +52,7 @@
    pip install -r requirements.txt
    ```
 
-3. 确保FFmpeg已安装并可在系统路径中找到，或将其放置在项目的`Softwares/ffmpeg/bin/`目录下
+3. 确保FFmpeg已安装并可在系统路径中找到，或将其放置在项目的`Softwares/ffmpeg/`目录下
 
 4. 在`Config`目录下创建腾讯云凭证文件：
    - 创建`tencent_cloud_secret_key.csv`文件，包含您的SecretId和SecretKey
