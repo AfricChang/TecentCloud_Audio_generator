@@ -147,8 +147,7 @@ TecentCloud_Audio_generator\
 ├── Audios\                 # 合成音频输出目录
 └── Softwares\              # 第三方软件目录
     └── ffmpeg\
-        └── bin\
-            ├── ffmpeg.exe
+      ├── ffmpeg.exe
 ```
 
 ## 注意事项
