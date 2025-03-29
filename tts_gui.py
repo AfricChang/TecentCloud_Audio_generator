@@ -396,14 +396,19 @@ class TTSApp(QWidget):
         self.synthesis_tab = QWidget()
         self.synthesis_layout = QVBoxLayout(self.synthesis_tab)
         
-        # 合成记录标签页
-        self.history_tab = QWidget()
-        self.history_layout = QVBoxLayout(self.history_tab)
-        self.history_layout.addWidget(QLabel("合成记录将在这里显示"))
+        # 声音克隆标签页（原合成记录）
+        self.clone_tab = QWidget()
+        self.clone_layout = QVBoxLayout(self.clone_tab)
+        
+        # 添加正在开发中的提示
+        developing_label = QLabel("声音克隆功能正在开发中...")
+        developing_label.setAlignment(Qt.AlignCenter)
+        developing_label.setStyleSheet("font-size: 18px; color: #888888; margin: 50px;")
+        self.clone_layout.addWidget(developing_label)
         
         # 添加标签页
         self.tab_widget.addTab(self.synthesis_tab, "合成音频")
-        self.tab_widget.addTab(self.history_tab, "合成记录")
+        self.tab_widget.addTab(self.clone_tab, "声音克隆")
         
         main_layout.addWidget(self.tab_widget)
         
