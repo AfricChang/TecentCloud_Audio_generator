@@ -1,0 +1,4 @@
+requests
+PyQt5
+PyQt-Fluent-Widgets
+tencentcloud-sdk-python

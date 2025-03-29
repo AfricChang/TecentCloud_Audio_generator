@@ -98,7 +98,7 @@ def get_voice_name(voice_id):
         print(f"读取音色文件失败: {str(e)}")
         return voice_id_str
 
-def text_to_speech(text, output_file="output.wav", voice_type=101011):
+def text_to_speech(text, output_file="output.wav", voice_type=101011, speed=0, volume=5):
     temp_dir = None
     temp_files = []
     concat_list_path = None
@@ -142,8 +142,8 @@ def text_to_speech(text, output_file="output.wav", voice_type=101011):
                 "Text": segment,
                 "SessionId": f"session-{i}-{hash(segment)}",
                 "VoiceType": voice_type,  # 使用传入的音色ID
-                "Volume": 0,        # 音量
-                "Speed": 0,         # 语速
+                "Volume": volume,        # 音量
+                "Speed": speed,         # 语速
                 "Codec": "wav",     # 编码格式
                 "PrimaryLanguage": 1,  # 语言
             }
