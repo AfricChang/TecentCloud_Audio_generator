@@ -15,6 +15,7 @@ from PyQt5.QtMultimedia import QMediaPlayer, QMediaContent
 from qfluentwidgets import (PushButton, TabBar, SearchLineEdit, Slider, 
                            ToggleButton, CardWidget, ToolButton, InfoBar,
                            FluentIcon, ComboBox)
+import sip
 
 # 导入audio_generator模块
 import audio_generator
@@ -643,6 +644,11 @@ class TTSApp(QWidget):
     
     def update_voice_list(self):
         """更新左侧音色列表显示"""
+        # 停止正在播放的示例音频
+        if self.current_playing_card:
+            self.sample_player.stop()
+            self.current_playing_card = None
+        
         # 清理旧的布局
         if self.left_container.layout():
             QWidget().setLayout(self.left_container.layout())
@@ -757,6 +763,16 @@ class TTSApp(QWidget):
     
     def on_voice_selected(self, event, voice_info):
         """处理音色选择"""
+        # 如果正在播放示例音频，停止播放
+        if self.current_playing_card:
+            self.sample_player.stop()
+            try:
+                if self.current_playing_card.isVisible() and not sip.isdeleted(self.current_playing_card):
+                    self.current_playing_card.set_playing_state(False)
+            except (RuntimeError, ReferenceError, Exception):
+                pass
+            self.current_playing_card = None
+            
         # 更新选中的音色
         if hasattr(self, 'selected_voice'):
             # 移除旧的选中音色
@@ -980,7 +996,11 @@ class TTSApp(QWidget):
         try:
             # 如果有其他正在播放的示例，先停止它
             if self.current_playing_card and self.current_playing_card != voice_card:
-                self.current_playing_card.set_playing_state(False)
+                try:
+                    if self.current_playing_card.isVisible() and not sip.isdeleted(self.current_playing_card):
+                        self.current_playing_card.set_playing_state(False)
+                except (RuntimeError, ReferenceError, Exception):
+                    pass  # 对象可能已被删除，忽略错误
                 self.sample_player.stop()
             
             # 设置新的播放卡片
@@ -1000,17 +1020,27 @@ class TTSApp(QWidget):
     def pause_sample_audio(self, voice_card):
         """暂停示例音频"""
         if self.current_playing_card == voice_card:
-            self.sample_player.pause()
-            voice_card.set_playing_state(False)
-            return True
+            try:
+                self.sample_player.pause()
+                if voice_card.isVisible() and not sip.isdeleted(voice_card):
+                    voice_card.set_playing_state(False)
+                return True
+            except (RuntimeError, ReferenceError, Exception) as e:
+                self.log(f"暂停音频失败: {str(e)}")
+                return False
         return False
     
     def sample_state_changed(self, state):
         """示例音频播放状态改变时的处理"""
         if state == QMediaPlayer.StoppedState and self.current_playing_card:
-            # 播放结束时重置状态
-            self.current_playing_card.set_playing_state(False)
-            self.current_playing_card = None
+            try:
+                # 检查卡片对象是否仍然有效
+                if self.current_playing_card.isVisible() and not sip.isdeleted(self.current_playing_card):
+                    self.current_playing_card.set_playing_state(False)
+                self.current_playing_card = None
+            except (RuntimeError, ReferenceError, Exception):
+                # 对象可能已被删除，安全处理
+                self.current_playing_card = None
     
     def filter_voices(self, text):
         """根据搜索框筛选音色"""
