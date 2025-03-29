@@ -7,14 +7,14 @@ import datetime
 from PyQt5.QtWidgets import (QApplication, QWidget, QVBoxLayout, QHBoxLayout, 
                             QLabel, QLineEdit, QTextEdit, QScrollArea, QGridLayout,
                             QTabWidget, QFrame, QStackedWidget, QComboBox, QPlainTextEdit,
-                            QFileDialog)
+                            QFileDialog,QMenuBar,QDialog)
 from PyQt5.QtCore import Qt, QSize, QThread, pyqtSignal, QEvent, QUrl
 from PyQt5.QtGui import QPixmap, QIcon, QPainter, QTextCursor, QCursor
 from PyQt5.QtSvg import QSvgRenderer
 from PyQt5.QtMultimedia import QMediaPlayer, QMediaContent
 from qfluentwidgets import (PushButton, TabBar, SearchLineEdit, Slider, 
                            ToggleButton, CardWidget, ToolButton, InfoBar,
-                           FluentIcon, ComboBox)
+                           FluentIcon, ComboBox,Dialog,MessageBox)
 import sip
 
 # 资源路径处理
@@ -456,6 +456,82 @@ class TTSApp(QWidget):
         
         return None
 
+    def create_menu_bar(self):
+        """创建菜单栏"""
+        menu_bar = QMenuBar(self)
+        menu_bar.setFixedHeight(30)
+        
+        # 添加"帮助"菜单
+        help_menu = menu_bar.addMenu("帮助")
+        
+        # 添加"关于"菜单项
+        about_action = help_menu.addAction("关于")
+        about_action.triggered.connect(self.show_about_dialog)
+        
+        # 将菜单栏添加到主布局
+        self.layout().setMenuBar(menu_bar)
+    
+    def show_about_dialog(self):
+        """显示关于对话框"""
+        # 创建自定义对话框
+        about_dialog = QDialog(self)
+        about_dialog.setWindowTitle("关于")
+        about_dialog.setFixedSize(400, 300)
+        
+        # 创建对话框布局
+        layout = QVBoxLayout(about_dialog)
+        
+        # 添加标题
+        title_label = QLabel("腾讯云语音合成工具")
+        title_label.setStyleSheet("font-size: 18px; font-weight: bold;")
+        title_label.setAlignment(Qt.AlignCenter)
+        layout.addWidget(title_label)
+        
+        # 添加版本信息
+        version_label = QLabel("版本: 1.0.0")
+        version_label.setAlignment(Qt.AlignCenter)
+        layout.addWidget(version_label)
+        
+        # 添加分隔线
+        line = QFrame()
+        line.setFrameShape(QFrame.HLine)
+        line.setFrameShadow(QFrame.Sunken)
+        layout.addWidget(line)
+        
+        # 添加项目描述
+        description = QLabel(
+            "本工具基于腾讯云语音合成服务，提供多种音色选择和语音合成功能。\n"
+            "支持调节语速、音量，并可保存合成的音频文件。"
+        )
+        description.setWordWrap(True)
+        description.setAlignment(Qt.AlignLeft)
+        layout.addWidget(description)
+        
+        # 添加开源信息（使用HTML格式支持超链接）
+        github_link = QLabel(
+            '项目开源地址: <a href="https://github.com/AfricChang/TencentCloud_Audio_generator">GitHub</a>'
+        )
+        github_link.setOpenExternalLinks(True)  # 允许打开外部链接
+        github_link.setAlignment(Qt.AlignCenter)
+        layout.addWidget(github_link)
+        
+        # 添加版权信息
+        copyright_label = QLabel("© 2025 AfricChang. 保留所有权利。")
+        copyright_label.setAlignment(Qt.AlignCenter)
+        layout.addWidget(copyright_label)
+        
+        # 添加确定按钮
+        button_layout = QHBoxLayout()
+        ok_button = PushButton("确定")
+        ok_button.clicked.connect(about_dialog.accept)
+        button_layout.addStretch()
+        button_layout.addWidget(ok_button)
+        button_layout.addStretch()
+        layout.addLayout(button_layout)
+        
+        # 显示对话框
+        about_dialog.exec_()
+    
     def initUI(self):
         # 设置窗口标题
         self.setWindowTitle('语音合成工具')
@@ -464,7 +540,9 @@ class TTSApp(QWidget):
         # 创建主布局
         main_layout = QVBoxLayout(self)
         main_layout.setContentsMargins(0, 0, 0, 0)
-        
+        # 创建菜单栏
+        self.create_menu_bar()
+
         # 创建标签页
         self.tab_widget = QTabWidget()
         self.tab_widget.setStyleSheet("QTabBar::tab { height: 30px; min-width: 100px; }")
