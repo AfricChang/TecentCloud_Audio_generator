@@ -182,31 +182,12 @@ TecentCloud_Audio_generator\
      - `tencent_cloud_secret_key.csv`
      - `tencent_cloud_voice_type.csv`
 
-2. **FFmpeg路径问题**（最常见原因）：
-   - 错误信息显示"片段合成成功"后报错，通常是FFmpeg路径问题
-   - 解决方法：
-     1. 确认FFmpeg已安装并放置在正确位置：
-        ```
-        [项目根目录]/Softwares/ffmpeg/bin/ffmpeg.exe
-        ```
-     2. 或修改代码中的FFmpeg路径：
-        在`audio_generator.py`文件中找到这两行：
-        ```python
-        ffmpeg_path = os.path.abspath(os.path.join(base_dir, "Softwares", "ffmpeg", "bin", "ffmpeg.exe"))
-        ```
-      
-     3. 或者将FFmpeg添加到系统PATH环境变量中，然后修改代码使用简单路径：
-        ```python
-        ffmpeg_path = "ffmpeg"
-        ffprobe_path = "ffprobe"
-        ```
-
-3. **目录结构**：
+2. **目录结构**：
    - 确保项目目录结构正确，参考上述"项目结构"部分
 
-4. **权限问题**：
+3. **权限问题**：
    - 确保程序有权限访问所有必要的文件和目录
    - 尝试以管理员身份运行命令提示符或PowerShell
 
-5. **其他问题**
+4. **其他问题**
    - 腾讯云语音相关问题请访问：https://cloud.tencent.com/document/product/1073/34090
