@@ -442,14 +442,6 @@ class TTSApp(QWidget):
             self.type_combo.addItem(voice_type)
         search_filter_layout.addWidget(self.type_combo)
         
-        # 添加伸展因子使右侧文本靠右
-        search_filter_layout.addStretch(1)
-        
-        # 右侧提示文本
-        hint_label = QLabel("请输入需要合成的文字，支持直接解析SSML标签，最多可支持600个字符")
-        hint_label.setStyleSheet("color: gray;")
-        search_filter_layout.addWidget(hint_label)
-        
         self.synthesis_layout.addLayout(search_filter_layout)
         
         # 添加分割线
@@ -881,7 +873,11 @@ class TTSApp(QWidget):
         
         # 创建带时间戳的文件名
         timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
-        filename = f"{voice_id}_{timestamp}.wav"
+        voice_name = self.selected_voice.voice_info.name
+        # 移除不合法的文件名字符
+        import re
+        safe_name = re.sub(r'[\\/*?:"<>|]', "_", voice_name)
+        filename = f"{safe_name}_{timestamp}.wav"
         output_path = os.path.join(audio_dir, filename)
         
         self.log(f"音频将保存至: {output_path}")
