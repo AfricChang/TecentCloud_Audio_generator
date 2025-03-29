@@ -149,7 +149,6 @@ TecentCloud_Audio_generator\
     └── ffmpeg\
         └── bin\
             ├── ffmpeg.exe
-            └── ffprobe.exe
 ```
 
 ## 注意事项
@@ -194,13 +193,8 @@ TecentCloud_Audio_generator\
         在`audio_generator.py`文件中找到这两行：
         ```python
         ffmpeg_path = os.path.abspath(os.path.join(base_dir, "Softwares", "ffmpeg", "bin", "ffmpeg.exe"))
-        ffprobe_path = os.path.abspath(os.path.join(base_dir, "Softwares", "ffmpeg", "bin", "ffprobe.exe"))
         ```
-        修改为您系统中FFmpeg的实际路径，例如：
-        ```python
-        ffmpeg_path = "C:/Program Files/ffmpeg/bin/ffmpeg.exe"
-        ffprobe_path = "C:/Program Files/ffmpeg/bin/ffprobe.exe"
-        ```
+      
      3. 或者将FFmpeg添加到系统PATH环境变量中，然后修改代码使用简单路径：
         ```python
         ffmpeg_path = "ffmpeg"

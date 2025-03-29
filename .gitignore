@@ -5,8 +5,8 @@ __pycache__/
 
 #secret_key
 config/tencent_cloud_secret_key.csv
-#ffmpeg
-softwares/ffmpeg
+#softwares
+softwares/
 #audios
 Audios/
 

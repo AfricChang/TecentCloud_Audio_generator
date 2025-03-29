@@ -19,7 +19,6 @@ base_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "./"))
 
 # FFmpeg路径
 ffmpeg_path = os.path.abspath(os.path.join(base_dir, "Softwares", "ffmpeg", "bin", "ffmpeg.exe"))
-ffprobe_path = os.path.abspath(os.path.join(base_dir, "Softwares", "ffmpeg", "bin", "ffprobe.exe"))
 
 def load_credentials_from_csv(csv_path):
     """从CSV文件中加载腾讯云凭证"""
