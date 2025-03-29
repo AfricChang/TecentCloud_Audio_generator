@@ -466,17 +466,12 @@ class TTSApp(QWidget):
         right_panel = QWidget()
         right_layout = QVBoxLayout(right_panel)
         
-        # 选中的音色显示(默认选择WeRose)
+        # 选中的音色显示(默认选择第一个音色)
         selected_voice_layout = QHBoxLayout()
         
-        # 查找WeRose音色
+        # 默认选择第一个音色
         default_voice = None
-        for voice in self.voice_list:
-            if voice.name == "WeRose":
-                default_voice = voice
-                break
-        
-        if not default_voice and self.voice_list:
+        if self.voice_list:
             default_voice = self.voice_list[0]
             
         # 默认选中的音色
@@ -550,11 +545,13 @@ class TTSApp(QWidget):
         self.synthesize_button.setEnabled(False)  # 初始时禁用按钮
         bottom_controls.addWidget(self.synthesize_button)
         
-        # 下载按钮
-        self.download_button = ToolButton()
-        self.download_button.setIcon(FluentIcon.DOWNLOAD)
-        self.download_button.setFixedSize(36, 36)
-        bottom_controls.addWidget(self.download_button)
+        # 下载按钮 -> 修改为打开文件夹按钮
+        self.folder_button = ToolButton()
+        self.folder_button.setIcon(FluentIcon.FOLDER)
+        self.folder_button.setFixedSize(36, 36)
+        self.folder_button.setToolTip("打开音频保存文件夹")
+        self.folder_button.clicked.connect(self.open_audio_folder)
+        bottom_controls.addWidget(self.folder_button)
         
         # 播放按钮
         self.play_button = ToolButton()
@@ -566,6 +563,8 @@ class TTSApp(QWidget):
         self.progress_slider = Slider(Qt.Horizontal)
         self.progress_slider.setEnabled(False)
         self.progress_slider.sliderMoved.connect(self.set_position)  # 添加滑动控制播放位置的功能
+        self.progress_slider.sliderPressed.connect(self.slider_pressed)  # 添加按下事件
+        self.progress_slider.sliderReleased.connect(self.slider_released)  # 添加释放事件
         bottom_controls.addWidget(self.progress_slider)
         
         # 时间显示
@@ -964,7 +963,13 @@ class TTSApp(QWidget):
     
     def set_position(self, position):
         """设置播放位置"""
-        self.media_player.setPosition(position)
+        # 更新时间显示，无需等待position_changed信号
+        current_secs = position // 1000
+        total_secs = self.media_player.duration() // 1000
+        self.time_label.setText(f"{current_secs//60:02d}:{current_secs%60:02d} / {total_secs//60:02d}:{total_secs%60:02d}")
+        
+        # 不立即设置位置，等待用户松开滑块后再设置
+        # 这样可以避免拖动过程中的频繁跳转
     
     def on_play_audio(self):
         """播放按钮点击事件 - 只控制合成音频，不控制示例音频"""
@@ -1047,6 +1052,47 @@ class TTSApp(QWidget):
         if text:
             self.log(f"搜索音色: {text}")
         self.update_voice_list()  # 根据当前的搜索文本和各种筛选条件重新加载音色列表
+    
+    def slider_pressed(self):
+        """进度条按下事件"""
+        # 暂时记录是否正在播放
+        self.was_playing = self.media_player.state() == QMediaPlayer.PlayingState
+        if self.was_playing:
+            self.media_player.pause()  # 按下时暂停播放，使拖动更流畅
+    
+    def slider_released(self):
+        """进度条释放事件"""
+        self.media_player.setPosition(self.progress_slider.value())  # 设置新位置
+        if hasattr(self, 'was_playing') and self.was_playing:
+            self.media_player.play()  # 如果之前在播放，则恢复播放
+
+    def open_audio_folder(self):
+        """打开音频保存文件夹"""
+        try:
+            current_dir = os.path.dirname(os.path.abspath(__file__))
+            audio_dir = os.path.join(current_dir, "Audios")
+            
+            # 确保目录存在
+            if not os.path.exists(audio_dir):
+                os.makedirs(audio_dir)
+                self.log(f"创建音频保存目录: {audio_dir}")
+            
+            # 根据不同平台打开文件夹
+            if sys.platform == "win32":
+                os.startfile(audio_dir)
+            elif sys.platform == "darwin":  # macOS
+                subprocess.call(["open", audio_dir])
+            else:  # Linux
+                subprocess.call(["xdg-open", audio_dir])
+                
+            self.log(f"打开音频保存目录: {audio_dir}")
+        except Exception as e:
+            self.log(f"打开音频保存目录失败: {str(e)}")
+            InfoBar.error(
+                title="错误",
+                content=f"无法打开文件夹: {str(e)}",
+                parent=self
+            )
 
 # 启动应用
 if __name__ == '__main__':
